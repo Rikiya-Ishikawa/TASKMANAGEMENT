@@ -9,7 +9,7 @@
 | 層 | 技術 |
 |----|------|
 | フロントエンド | React |
-| バックエンド | Python（FastAPI） |
+| バックエンド | Java（Spring Boot） |
 | データベース | SQLite |
 | 動作環境 | Webブラウザ（PC） |
 
