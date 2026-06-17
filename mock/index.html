@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>TaskBoard - モック</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background-color: #1a6b9a;
+      min-height: 100vh;
+    }
+
+    /* ヘッダー */
+    header {
+      background-color: rgba(0, 0, 0, 0.2);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+    }
+
+    header h1 {
+      color: #fff;
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    /* ボードエリア */
+    main {
+      display: flex;
+      gap: 12px;
+      padding: 20px 24px;
+      align-items: flex-start;
+    }
+
+    /* リスト（列） */
+    .list {
+      background-color: #ebecf0;
+      border-radius: 8px;
+      width: 272px;
+      flex-shrink: 0;
+      padding: 8px;
+      transition: background-color 0.15s;
+    }
+
+    .list.drag-over {
+      background-color: #c8d4e0;
+    }
+
+    .list-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #172b4d;
+      padding: 4px 6px 8px;
+    }
+
+    /* カードエリア */
+    .cards-area {
+      min-height: 4px;
+    }
+
+    /* カード */
+    .card {
+      background-color: #fff;
+      border-radius: 4px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+      cursor: grab;
+      transition: box-shadow 0.15s, opacity 0.15s;
+      user-select: none;
+    }
+
+    .card:hover {
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .card.dragging {
+      opacity: 0.4;
+      cursor: grabbing;
+    }
+
+    .card-title {
+      font-size: 14px;
+      color: #172b4d;
+      flex: 1;
+      word-break: break-word;
+      line-height: 1.4;
+    }
+
+    .card-delete-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0 0 0 6px;
+      color: #aaa;
+      flex-shrink: 0;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+
+    .card-delete-btn:hover {
+      color: #e53935;
+    }
+
+    /* ドロップ先プレースホルダー */
+    .drop-placeholder {
+      background-color: #c8d4e0;
+      border: 2px dashed #a0b2c3;
+      border-radius: 4px;
+      height: 36px;
+      margin-bottom: 8px;
+    }
+
+    /* カード追加ボタン */
+    .add-card-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #5e6c84;
+      font-size: 14px;
+      padding: 6px;
+      width: 100%;
+      text-align: left;
+      border-radius: 4px;
+      transition: background-color 0.15s, color 0.15s;
+    }
+
+    .add-card-btn:hover {
+      background-color: rgba(0, 0, 0, 0.07);
+      color: #172b4d;
+    }
+
+    /* カード追加フォーム */
+    .add-card-form {
+      display: none;
+    }
+
+    .add-card-form.open {
+      display: block;
+    }
+
+    .add-card-form textarea {
+      width: 100%;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 10px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      height: 60px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+      outline: none;
+      color: #172b4d;
+    }
+
+    .add-card-form-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .btn-add {
+      background-color: #0079bf;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background-color 0.15s;
+    }
+
+    .btn-add:hover {
+      background-color: #026aa7;
+    }
+
+    .btn-cancel {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      color: #5e6c84;
+      padding: 2px 4px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+
+    .btn-cancel:hover {
+      color: #172b4d;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>TaskBoard</h1>
+</header>
+
+<main id="board">
+</main>
+
+<script>
+  // 初期データ（設計書のサンプルデータ）
+  const initialData = [
+    {
+      id: 1,
+      name: "未着手",
+      cards: [
+        { id: 1, title: "企画書作成" },
+        { id: 2, title: "会議の準備" },
+      ]
+    },
+    {
+      id: 2,
+      name: "進行中",
+      cards: [
+        { id: 3, title: "メール返信" },
+      ]
+    },
+    {
+      id: 3,
+      name: "完了",
+      cards: [
+        { id: 4, title: "請求書送付" },
+      ]
+    }
+  ];
+
+  let nextCardId = 5;
+  let draggingCardEl = null;
+  let draggingFromListId = null;
+  let placeholder = null;
+
+  // ボードを描画する
+  function render(data) {
+    const board = document.getElementById("board");
+    board.innerHTML = "";
+
+    data.forEach(list => {
+      const listEl = createListEl(list);
+      board.appendChild(listEl);
+    });
+  }
+
+  // リスト要素を生成する
+  function createListEl(list) {
+    const listEl = document.createElement("div");
+    listEl.className = "list";
+    listEl.dataset.listId = list.id;
+
+    const titleEl = document.createElement("div");
+    titleEl.className = "list-title";
+    titleEl.textContent = list.name;
+
+    const cardsArea = document.createElement("div");
+    cardsArea.className = "cards-area";
+
+    list.cards.forEach(card => {
+      cardsArea.appendChild(createCardEl(card, list.id));
+    });
+
+    const form = createAddCardForm(list.id);
+    const addBtn = createAddCardBtn(form);
+
+    listEl.appendChild(titleEl);
+    listEl.appendChild(cardsArea);
+    listEl.appendChild(form);
+    listEl.appendChild(addBtn);
+
+    setupDropZone(listEl, cardsArea);
+
+    return listEl;
+  }
+
+  // カード要素を生成する
+  function createCardEl(card, listId) {
+    const cardEl = document.createElement("div");
+    cardEl.className = "card";
+    cardEl.draggable = true;
+    cardEl.dataset.cardId = card.id;
+    cardEl.dataset.listId = listId;
+
+    const titleEl = document.createElement("span");
+    titleEl.className = "card-title";
+    titleEl.textContent = card.title;
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "card-delete-btn";
+    deleteBtn.textContent = "🗑";
+    deleteBtn.title = "削除";
+    deleteBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteCard(card.id, listId);
+    });
+
+    cardEl.appendChild(titleEl);
+    cardEl.appendChild(deleteBtn);
+
+    // ドラッグ開始
+    cardEl.addEventListener("dragstart", (e) => {
+      draggingCardEl = cardEl;
+      draggingFromListId = listId;
+      setTimeout(() => cardEl.classList.add("dragging"), 0);
+      e.dataTransfer.effectAllowed = "move";
+    });
+
+    cardEl.addEventListener("dragend", () => {
+      cardEl.classList.remove("dragging");
+      draggingCardEl = null;
+      draggingFromListId = null;
+      removePlaceholder();
+      document.querySelectorAll(".list").forEach(el => el.classList.remove("drag-over"));
+    });
+
+    return cardEl;
+  }
+
+  // カード追加ボタンを生成する
+  function createAddCardBtn(form) {
+    const btn = document.createElement("button");
+    btn.className = "add-card-btn";
+    btn.textContent = "＋ カードを追加";
+    btn.addEventListener("click", () => {
+      btn.style.display = "none";
+      form.classList.add("open");
+      form.querySelector("textarea").focus();
+    });
+    return btn;
+  }
+
+  // カード追加フォームを生成する
+  function createAddCardForm(listId) {
+    const formEl = document.createElement("div");
+    formEl.className = "add-card-form";
+
+    const textarea = document.createElement("textarea");
+    textarea.placeholder = "カードのタイトルを入力...";
+
+    const actions = document.createElement("div");
+    actions.className = "add-card-form-actions";
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn-add";
+    addBtn.textContent = "追加";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn-cancel";
+    cancelBtn.textContent = "✕";
+    cancelBtn.title = "キャンセル";
+
+    actions.appendChild(addBtn);
+    actions.appendChild(cancelBtn);
+    formEl.appendChild(textarea);
+    formEl.appendChild(actions);
+
+    const closeForm = () => {
+      formEl.classList.remove("open");
+      textarea.value = "";
+      // 追加ボタンを再表示
+      const addCardBtn = formEl.nextElementSibling;
+      if (addCardBtn) addCardBtn.style.display = "";
+    };
+
+    addBtn.addEventListener("click", () => {
+      const title = textarea.value.trim();
+      if (title) {
+        addCard(listId, title);
+        closeForm();
+      }
+    });
+
+    cancelBtn.addEventListener("click", closeForm);
+
+    textarea.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        const title = textarea.value.trim();
+        if (title) {
+          addCard(listId, title);
+          closeForm();
+        }
+      }
+      if (e.key === "Escape") {
+        closeForm();
+      }
+    });
+
+    return formEl;
+  }
+
+  // ドロップゾーンのイベントを設定する
+  function setupDropZone(listEl, cardsArea) {
+    listEl.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      listEl.classList.add("drag-over");
+
+      if (!placeholder) {
+        placeholder = document.createElement("div");
+        placeholder.className = "drop-placeholder";
+      }
+
+      // マウス位置に応じてプレースホルダーを挿入する位置を決める
+      const afterEl = getDragAfterElement(cardsArea, e.clientY);
+      if (afterEl == null) {
+        cardsArea.appendChild(placeholder);
+      } else {
+        cardsArea.insertBefore(placeholder, afterEl);
+      }
+    });
+
+    listEl.addEventListener("dragleave", (e) => {
+      // リスト外に出たときだけ除去する
+      if (!listEl.contains(e.relatedTarget)) {
+        listEl.classList.remove("drag-over");
+        removePlaceholder();
+      }
+    });
+
+    listEl.addEventListener("drop", (e) => {
+      e.preventDefault();
+      listEl.classList.remove("drag-over");
+
+      if (!draggingCardEl) return;
+
+      const toListId = parseInt(listEl.dataset.listId);
+      const cardId = parseInt(draggingCardEl.dataset.cardId);
+
+      // データを移動する
+      moveCard(cardId, draggingFromListId, toListId);
+    });
+  }
+
+  // ドロップ位置の次の要素を求める
+  function getDragAfterElement(container, y) {
+    const draggableEls = [...container.querySelectorAll(".card:not(.dragging)")];
+    return draggableEls.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset, element: child };
+      }
+      return closest;
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+
+  function removePlaceholder() {
+    if (placeholder && placeholder.parentNode) {
+      placeholder.parentNode.removeChild(placeholder);
+    }
+    placeholder = null;
+  }
+
+  // カードを追加する
+  function addCard(listId, title) {
+    const list = initialData.find(l => l.id === listId);
+    if (!list) return;
+    list.cards.push({ id: nextCardId++, title });
+    render(initialData);
+  }
+
+  // カードを削除する
+  function deleteCard(cardId, listId) {
+    const list = initialData.find(l => l.id === listId);
+    if (!list) return;
+    list.cards = list.cards.filter(c => c.id !== cardId);
+    render(initialData);
+  }
+
+  // カードを別リストへ移動する
+  function moveCard(cardId, fromListId, toListId) {
+    const fromList = initialData.find(l => l.id === fromListId);
+    const toList = initialData.find(l => l.id === toListId);
+    if (!fromList || !toList) return;
+
+    const cardIndex = fromList.cards.findIndex(c => c.id === cardId);
+    if (cardIndex === -1) return;
+
+    const [card] = fromList.cards.splice(cardIndex, 1);
+
+    // プレースホルダーの位置を挿入位置として使う
+    if (placeholder && placeholder.parentNode) {
+      const cardsArea = placeholder.parentNode;
+      const allChildren = [...cardsArea.children];
+      const insertIndex = allChildren.indexOf(placeholder);
+      toList.cards.splice(insertIndex, 0, card);
+    } else {
+      toList.cards.push(card);
+    }
+
+    render(initialData);
+  }
+
+  // 初期表示
+  render(initialData);
+</script>
+</body>
+</html>
